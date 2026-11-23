@@ -1,0 +1,31 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+      - name: Selftest
+        run: julia test/selftest.jl
+      - name: Parse gate (all .jl incl. notebook)
+        run: |
+          julia --startup-file=no -e '
+          files = ["fdtdapp.jl", "notebooks/Suite.jl",
+                   [f for d in ("src", "test") for f in readdir(joinpath(d); join = true)]...]
+          bad = 0
+          for f in files
+              endswith(f, ".jl") || continue
+              ex = Meta.parseall(read(f, String))
+              has_err = any(a -> a isa Expr && a.head === :error, ex.args)
+              println(has_err ? "FAIL " : "PASS ", f)
+              has_err && (bad += 1)
+          end
+          exit(bad == 0 ? 0 : 1)'
+      - name: Include gate (src chain compiles)
+        run: julia --startup-file=no -e 'include("src/AcousticCore.jl"); println("include OK")'

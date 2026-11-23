@@ -1,0 +1,6 @@
+*.jl.*.jl
+.plutosuitestate*
+*.log
+runs/
+data/
+.DS_Store
